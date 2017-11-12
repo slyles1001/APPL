@@ -151,3 +151,23 @@ PDF <- function(X, x = NA){
   
   
 }
+
+
+# R can do integrals. So, if we write a fxn that integrates, 
+# have AsAlg=TRUE in parameters
+# T: give sympy; F: give R
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

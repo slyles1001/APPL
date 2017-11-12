@@ -1,5 +1,3 @@
-RV <- structure(list(), class='RV')
-
 #  Purpose:  Define the common parametric continuous univariate
 #            probability distributions shown below:
 #
@@ -91,25 +89,37 @@ RV <- structure(list(), class='RV')
 ArcSinRV <- function(){
   #  ArcSin distribution (special case of beta with both parameters 1 / 2)
   if (nargs() > 0){print("ArcSin requires no arguments"); return()}
-  LoL <- list(sympy("1/(pi*sqrt(x*(x-1)))"), c(0,1), c("Continuous", "PDF"))
+  # We must tell sympy that x is a symbol
+  x <- Var("x")
+  # Make List of Lists, same as APPL
+  LoL <- structure(list(paste("x -> ",sympy("1/(pi*sqrt(x*(x-1)))")), 
+                  c("0","1"), c("Continuous", "PDF")), class="RV")
+  return(LoL)
   }
   
 ArcTanRV <- function(alpha, phi){
-  if (nargs != 2){print('ERROR(ArcTanRV): This procedure requires 2 arguments')
-    return()}
-  `alpha` <- alpha
-  if (sympy("%s == oo", alpha) || sympy(, infinity)) then
-  print(`ERROR(ArcTanRV): Both parameters must be finite`):
-    RETURN():
-    fi:
-    if type(alpha1, symbol) then
-  assume(alpha1, positive):
-    about(alpha1):
-    fi:
-    if type(phi1, symbol) then
-  assume(phi1, numeric):
-    fi:
-  
+  if (nargs != 2){
+    print('ERROR(ArcTanRV): This procedure requires 2 arguments')
+    return()
+  }
+  a <- ifelse(is.numeric(alpha), # If alpha is a number
+              Var(toString(alpha)), # turn it into a string for sympy
+              Var("alpha"))           # otherwise, leave it symbolic
+  p <- ifelse(is.numeric(p), # If phi is a number
+              Var(toString(p)), # turn it into a string for sympy
+              Var("phi"))           # otherwise, leave it symbolic
+  if (sympy(paste(a, " == oo")) || sympy(paste(p, " == oo"))){
+    print('ERROR(ArcTanRV): Both parameters must be finite')
+    return()
+  }
+  # (alpha1 / ((arctan(alpha1 * phi1) + Pi / 2) *
+  # (1 + alpha1 ^ 2 * (x - phi1) ^ 2))
+  # Hmm... does R have C-type stdf?
+  eq = paste(a, " / ((arctan(", a, " * ", p, ") + pi / 2 * (1 + ",
+             a, "**2 * ")  
+  LoL <- structure(list(paste("x -> ",sympy(eq)), 
+                        c("0","oo"), c("Continuous", "PDF")), class="RV")
+  return(LoL)
 }  
   
   
