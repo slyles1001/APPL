@@ -1,3 +1,4 @@
+# Need jdk installed for jython
 Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jdk-9.0.1')
 require("rSymPy")
 
@@ -89,24 +90,39 @@ require("rSymPy")
 #        [[f(x)], [support], ["Continuous", "XXX"]]
 #        where XXX is one of the following:  PDF, CDF, IDF, SF, HF, CHF
 #    6.  Return the list of lists
-
+#####################
 # Global Init some constants to standardize
+#####################
 infinity <- Var("oo")
 pi <- Var("Pi")
 # Python overloaded comparisons... AND DIDN'T TELL ME?
 is.infinity <- function(x){
   y <- x[1] == infinity[1]
 }
-
+unvar <- function(x){ # Again, to unload overload..
+  strtoi(x)
+}
+#####################
+# S4 class -- I think I prefer S3.
+# setClass("RV",
+#          slots = list(pdf = "character",
+#                       support = "character",
+#                       type = "character"))
+# S4 arcsin definition:
+# LoL <- new("RV", pdf =paste("x -> ",sympy("1/(pi*sqrt(x*(x-1)))")),
+#            support=c("0","1"), 
+#            type=c("Continuous", "PDF"))
+#####################
 ArcSinRV <- function(){
   #  ArcSin distribution (special case of beta with both parameters 1 / 2)
   if (nargs() > 0){print("ArcSin requires no arguments"); return()}
   # We must tell sympy that x is a symbol
   x <- Var("x")
-  # Make List of Lists, same as APPL
-  LoL <- structure(list(pdf=paste("x -> ",sympy("1/(pi*sqrt(x*(x-1)))")), 
-                  support=c("0","1"), 
+  # Make List of Lists, same as APPL -- S3
+  LoL <- structure(list(pdf=paste("x -> ",sympy("1/(pi*sqrt(x*(x-1)))")),
+                  support=c(0,1),
                   type=c("Continuous", "PDF")), class="RV")
+
   return(LoL)
   }
   
@@ -139,7 +155,7 @@ ArcTanRV <- function(alpha, phi){
   eq = paste(a, " / ((atan(", a, " * ", p, ") + pi / 2) * (1 + ",
              a, "**2 * (", x, " - ", p, ")**2))")
   LoL <- structure(list(pdf=paste("x -> ",sympy(eq)), 
-                        support=c("0", infinity), 
+                        support=c(0, infinity), 
                         type=c("Continuous", "PDF")), class="RV")
   return(LoL)
 }  
@@ -169,7 +185,7 @@ BetaRV <- function(alpha, beta){
   
   eq = paste(G, " * x**(", a, " - 1)*(1 - x)**(", b, " - 1)")
   LoL <- structure(list(pdf=paste("x -> ", sympy(eq)),
-                        support=c("0", "1"), 
+                        support=c(0, 1), 
                         type=c("Continuous", "PDF")), class="RV")
   return(LoL)
 }
@@ -202,8 +218,7 @@ CauchyRV <- function(a, alpha){
   return(LoL)
 }  
   
-# This doesn't work! Fix it!
-# And while you're at it, go check the gamma in Beta!
+
 ChiRV <- function(n){
   if (nargs() != 1){
     print('ERROR(ChiRV): This procedure requires 1 argument')
@@ -213,7 +228,7 @@ ChiRV <- function(n){
     print('ERROR(ChiRV): n must be finite')
     return()
   }
-  if(class(n)!="Sym" && (!is.numeric(n) || n < 0)){
+  if(!is(n, "Sym") && (!is.numeric(n) || n < 0)){
     print("The shape parameter n must be a symbol or positive numeric")
     return()
   }
@@ -222,18 +237,26 @@ ChiRV <- function(n){
   #              Var("n"))           # otherwise, leave it symbolic
   # 
   if(is.numeric(n)) n1 <- Var(n)
-  else if(class(n) == "Sym") n1 <- n
+  else if(is(n, "Sym")) n1 <- n
   
   x <- Var("x")
-  G <- gamma(n/2)
-  # This is necessary because R's gamma won't work on a Symbol
-  # G <- sympy(paste("gamma(", n1, "/2)"))
-  print(G)
-  # For some reason, if we use n1 and ' - 1' then it leaves it like '12 - 1'?
-  # use n instead, but I don't like it
-  eq <- paste("x**", n1 - 1, " * exp(-x**2 / 2) / (2**(", 
-              n1, " / 2 - 1) * ", G, ")")
-
+  G <- gamma(unvar(n1)/2)
+  ###############
+  # OK, some huge 'feature' of sympy...
+  # > sympy('1/(2**(5/2 - 1))')
+  # [1] "0"
+  # > sympy('1/(2**(3/2))')
+  # [1] "0"
+  # > sympy('1.0/(2**(3/2))')
+  # [1] "0.5"
+  # > sympy('1.0/(2.0**(3/2))')
+  # [1] "0.5"
+  ###############
+  twos = 2**(unvar(n1) / 2 - 1 ) # python intstuff
+                                 # don't know how to algebra that.
+  eq <- paste("x**", (n1 - 1), 
+              " * exp(-x**2 / 2) / (", twos, " * ", G, ")")
+  print(eq)
   LoL <- structure(list(pdf=paste("x -> ", sympy(eq)), 
                             support=c("0", infinity),
                             type=c("Continuous", "PDF")), class="RV")
