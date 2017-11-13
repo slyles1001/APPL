@@ -1,3 +1,7 @@
+Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jdk-9.0.1')
+require("rSymPy")
+
+
 #  Purpose:  Define the common parametric continuous univariate
 #            probability distributions shown below:
 #
@@ -86,48 +90,155 @@
 #        where XXX is one of the following:  PDF, CDF, IDF, SF, HF, CHF
 #    6.  Return the list of lists
 
+# Global Init some constants to standardize
+infinity <- Var("oo")
+pi <- Var("Pi")
+# Python overloaded comparisons... AND DIDN'T TELL ME?
+is.infinity <- function(x){
+  y <- x[1] == infinity[1]
+}
+
 ArcSinRV <- function(){
   #  ArcSin distribution (special case of beta with both parameters 1 / 2)
   if (nargs() > 0){print("ArcSin requires no arguments"); return()}
   # We must tell sympy that x is a symbol
   x <- Var("x")
   # Make List of Lists, same as APPL
-  LoL <- structure(list(paste("x -> ",sympy("1/(pi*sqrt(x*(x-1)))")), 
-                  c("0","1"), c("Continuous", "PDF")), class="RV")
+  LoL <- structure(list(pdf=paste("x -> ",sympy("1/(pi*sqrt(x*(x-1)))")), 
+                  support=c("0","1"), 
+                  type=c("Continuous", "PDF")), class="RV")
   return(LoL)
   }
   
 ArcTanRV <- function(alpha, phi){
-  if (nargs != 2){
+  # Will take numeric or Var type inputs
+  if (nargs() != 2){
     print('ERROR(ArcTanRV): This procedure requires 2 arguments')
+    return()
+  }
+  if (is.infinity(alpha) || is.infinity(phi)){
+    print('ERROR(ArcTanRV): Both parameters must be finite')
+    return()
+  }
+  if((class(alpha)!="Sym" && alpha <= 0) || (class(phi)!="Sym" && phi <= 0)){
+    print("Alpha and Beta must be symbols or positive numerics")
+    return()
+  }
+  
+  a <- ifelse(is.numeric(alpha), # If alpha is a number
+              Var(toString(alpha)), # turn it into a string for sympy
+              Var("alpha"))           # otherwise, leave it symbolic
+  p <- ifelse(is.numeric(phi), # If phi is a number
+              Var(toString(phi)), # turn it into a string for sympy
+              Var("phi"))           # otherwise, leave it symbolic
+
+  x = Var("x")
+  # (alpha1 / ((arctan(alpha1 * phi1) + Pi / 2) *
+  # (1 + alpha1 ^ 2 * (x - phi1) ^ 2))
+  # Hmm... does R have C-type std? This string stuff is ugly...
+  eq = paste(a, " / ((atan(", a, " * ", p, ") + pi / 2) * (1 + ",
+             a, "**2 * (", x, " - ", p, ")**2))")
+  LoL <- structure(list(pdf=paste("x -> ",sympy(eq)), 
+                        support=c("0", infinity), 
+                        type=c("Continuous", "PDF")), class="RV")
+  return(LoL)
+}  
+  
+BetaRV <- function(alpha, beta){
+  if (nargs() != 2){
+    print('ERROR(BetaRV): This procedure requires 2 arguments')
+    return()
+  }
+  if (is.infinity(alpha) || is.infinity(beta)){
+    print('ERROR(BetaRV): Both parameters must be finite')
+    return()
+  }
+  if((class(alpha)!="Sym" && alpha <= 0) || (class(beta)!="Sym" && beta <= 0)){
+    print("Alpha and Beta must be symbols or positive numerics")
     return()
   }
   a <- ifelse(is.numeric(alpha), # If alpha is a number
               Var(toString(alpha)), # turn it into a string for sympy
               Var("alpha"))           # otherwise, leave it symbolic
-  p <- ifelse(is.numeric(p), # If phi is a number
-              Var(toString(p)), # turn it into a string for sympy
-              Var("phi"))           # otherwise, leave it symbolic
-  if (sympy(paste(a, " == oo")) || sympy(paste(p, " == oo"))){
-    print('ERROR(ArcTanRV): Both parameters must be finite')
+  b <- ifelse(is.numeric(beta), # If phi is a number
+              Var(toString(beta)), # turn it into a string for sympy
+              Var("beta"))           # otherwise, leave it symbolic
+  x = Var("x")
+  G = gamma(alpha + beta) / (gamma(alpha)* gamma(beta))
+  
+  
+  eq = paste(G, " * x**(", a, " - 1)*(1 - x)**(", b, " - 1)")
+  LoL <- structure(list(pdf=paste("x -> ", sympy(eq)),
+                        support=c("0", "1"), 
+                        type=c("Continuous", "PDF")), class="RV")
+  return(LoL)
+}
+  
+CauchyRV <- function(a, alpha){
+  if (nargs() != 2){
+    print('ERROR(CauchyRV): This procedure requires 2 arguments')
     return()
   }
-  # (alpha1 / ((arctan(alpha1 * phi1) + Pi / 2) *
-  # (1 + alpha1 ^ 2 * (x - phi1) ^ 2))
-  # Hmm... does R have C-type stdf?
-  eq = paste(a, " / ((arctan(", a, " * ", p, ") + pi / 2 * (1 + ",
-             a, "**2 * ")  
-  LoL <- structure(list(paste("x -> ",sympy(eq)), 
-                        c("0","oo"), c("Continuous", "PDF")), class="RV")
+  if (is.infinity(alpha) || is.infinity(a)){
+    print('ERROR(CauchyRV): Both parameters must be finite')
+    return()
+  }
+  if((class(a)!="Sym" && !is.numeric(a)) || (class(alpha)!="Sym" && alpha <= 0)){
+    print("A and alpha must be symbols or positive numerics")
+    return()
+  }
+  a1 <- ifelse(is.numeric(a), # If alpha is a number
+              Var(toString(a)), # turn it into a string for sympy
+              Var("a"))           # otherwise, leave it symbolic
+  a2 <- ifelse(is.numeric(alpha), # If phi is a number
+              Var(toString(alpha)), # turn it into a string for sympy
+              Var("alpha"))           # otherwise, leave it symbolic
+  
+  x <- Var("x")
+  eq <- paste("1 / (", a2, " * Pi * (1 + ((x - ", a1, ") / ", a2, ")**2))")
+  LoL <- structure(list(pdf=paste("x -> ", sympy(eq)), 
+                        support=c(-infinity, infinity),
+                        type=c("Continuous", "PDF")), class="RV")
   return(LoL)
 }  
   
+# This doesn't work! Fix it!
+# And while you're at it, go check the gamma in Beta!
+ChiRV <- function(n){
+  if (nargs() != 1){
+    print('ERROR(ChiRV): This procedure requires 1 argument')
+    return()
+  }
+  if (is.infinity(n)){
+    print('ERROR(ChiRV): n must be finite')
+    return()
+  }
+  if(class(n)!="Sym" && (!is.numeric(n) || n < 0)){
+    print("The shape parameter n must be a symbol or positive numeric")
+    return()
+  }
+  # n1 <- ifelse(is.numeric(n), # If n is a number
+  #              Var(n), # turn it into a string for sympy
+  #              Var("n"))           # otherwise, leave it symbolic
+  # 
+  if(is.numeric(n)) n1 <- Var(n)
+  else if(class(n) == "Sym") n1 <- n
   
-  
-  
-  
-  
-  
+  x <- Var("x")
+  G <- gamma(n/2)
+  # This is necessary because R's gamma won't work on a Symbol
+  # G <- sympy(paste("gamma(", n1, "/2)"))
+  print(G)
+  # For some reason, if we use n1 and ' - 1' then it leaves it like '12 - 1'?
+  # use n instead, but I don't like it
+  eq <- paste("x**", n1 - 1, " * exp(-x**2 / 2) / (2**(", 
+              n1, " / 2 - 1) * ", G, ")")
+
+  LoL <- structure(list(pdf=paste("x -> ", sympy(eq)), 
+                            support=c("0", infinity),
+                            type=c("Continuous", "PDF")), class="RV")
+  return(LoL)
+}  
 
 
 
