@@ -218,7 +218,6 @@ CauchyRV <- function(a, alpha){
   return(LoL)
 }  
   
-
 ChiRV <- function(n){
   if (nargs() != 1){
     print('ERROR(ChiRV): This procedure requires 1 argument')
@@ -242,7 +241,10 @@ ChiRV <- function(n){
   x <- Var("x")
   G <- gamma(unvar(n1)/2)
   ###############
-  # OK, some huge 'feature' of sympy...
+  # OK, so python rounds down, and 
+  # R can't differentiate between ** and ^, as in it goes ** -> ^
+  # which means that instead of exponents
+  # you can get the bitwise or from python
   # > sympy('1/(2**(5/2 - 1))')
   # [1] "0"
   # > sympy('1/(2**(3/2))')
@@ -251,19 +253,49 @@ ChiRV <- function(n){
   # [1] "0.5"
   # > sympy('1.0/(2.0**(3/2))')
   # [1] "0.5"
+  # > b = Var(2); c = Var(5);
+  # > b**c
+  # [1] "7"
+  # is there a way to pass in vars differently?
   ###############
   twos = 2**(unvar(n1) / 2 - 1 ) # python intstuff
                                  # don't know how to algebra that.
   eq <- paste("x**", (n1 - 1), 
               " * exp(-x**2 / 2) / (", twos, " * ", G, ")")
-  print(eq)
+  # print(eq)
   LoL <- structure(list(pdf=paste("x -> ", sympy(eq)), 
                             support=c("0", infinity),
                             type=c("Continuous", "PDF")), class="RV")
   return(LoL)
 }  
 
-
+ChiSquareRV <- function(n){
+  if (nargs() != 1){
+    print('ERROR(ChiSquareRV): This procedure requires 1 argument')
+    return()
+  }
+  if (is.infinity(n)){
+    print('ERROR(ChiSquareRV): n must be finite')
+    return()
+  }
+  if(!is(n, "Sym") && (!is.numeric(n) || n < 0)){
+    print("The shape parameter n must be a symbol or positive numeric")
+    return()
+  }
+  
+  if(is.numeric(n)) n1 <- Var(n)
+  else n1 <- n # if(is(n, "Sym"))
+  
+  x <- Var("x")
+  twos <- 2^(unvar(n1)/2)
+  G <- gamma(unvar(n1)/2)
+  #x ^ (n1 / 2 - 1) * exp(-x / 2) / (2 ^ (n1 / 2) * GAMMA(n1 / 2))
+  eq = paste("x**",(n1 / 2 - 1), "* exp(-x / 2) / (", twos, "*", G,")")
+  LoL <- structure(list(pdf=paste("x -> ", sympy(eq)), 
+                        support=c("0", infinity),
+                        type=c("Continuous", "PDF")), class="RV")
+  return(LoL)
+}
 
 
 
