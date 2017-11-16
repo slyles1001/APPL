@@ -1,5 +1,6 @@
 # Need jdk installed for jython
-Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jdk-9.0.1')
+#Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jdk-9.0.1')
+Sys.setenv(JAVA_HOME = "/Library/Java/JavaVirtualMachines/jdk1.7.0_07.jdk")
 require("rSymPy")
 
 
@@ -113,13 +114,16 @@ unvar <- function(x){ # Again, to unload overload..
 #            support=c("0","1"), 
 #            type=c("Continuous", "PDF"))
 #####################
-ArcSinRV <- function(){
+ArcSinRV <- function(varname="ArcSinRV"){
+  if(varname == 'x'){}
   #  ArcSin distribution (special case of beta with both parameters 1 / 2)
-  if (nargs() > 0){print("ArcSin requires no arguments"); return()}
+  # if (nargs() > 0){print("ArcSin requires no arguments"); return()}
   # We must tell sympy that x is a symbol
   x <- Var("x")
   # Make List of Lists, same as APPL -- S3
-  LoL <- structure(list(pdf=paste("x -> ",sympy("1/(pi*sqrt(x*(x-1)))")),
+  # took out "x ->" so the fxn can be used
+  # set the pdf inside sympy
+  LoL <- structure(list(pdf=sympy(paste(varname," = 1/(pi*sqrt(x*(x-1)))")),
                   support=c(0,1),
                   type=c("Continuous", "PDF")), class="RV")
 
@@ -154,7 +158,7 @@ ArcTanRV <- function(alpha, phi){
   # Hmm... does R have C-type std? This string stuff is ugly...
   eq = paste(a, " / ((atan(", a, " * ", p, ") + pi / 2) * (1 + ",
              a, "**2 * (", x, " - ", p, ")**2))")
-  LoL <- structure(list(pdf=paste("x -> ",sympy(eq)), 
+  LoL <- structure(list(pdf=sympy(paste("ArcTanRV = ", eq)), 
                         support=c(0, infinity), 
                         type=c("Continuous", "PDF")), class="RV")
   return(LoL)
